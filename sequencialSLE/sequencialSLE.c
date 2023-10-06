@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 int det(int **B, int m, int n)
 {
@@ -69,50 +70,67 @@ int det(int **B, int m, int n)
     }
 }
 
-void generateRandomArray(int *arr, int n)
+void generateRandomArray(int *array, int lenArray)
 {
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < lenArray; i++)
     {
-        arr[i] = rand() % (n * n * n);
+        array[i] = rand() % (lenArray * lenArray * lenArray);
     }
 }
 
-void printArr(int *arr, int n)
+void printArray(int *array, int n)
 {
     printf("[");
     for (int i = 0; i < n - 1; i++)
     {
-        printf("%d,\t", arr[i]);
+        printf("%d,\t", array[i]);
     }
-    printf("%d]\n", arr[n - 1]);
+    printf("%d]\n", array[n - 1]);
 }
 
-void printMatrix(int **arr, int n)
+void printMatrix(int **matrix, int lenMatrix)
 {
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < lenMatrix; i++)
     {
-        printArr(arr[i], n);
+        printArray(matrix[i], lenMatrix);
+    }
+}
+
+void initializeMatrixMemory(int ***matrix, int lenMatrix)
+{
+    *matrix = (int **)malloc(lenMatrix * sizeof(int *));
+    for (int i = 0; i < lenMatrix; i++)
+    {
+        (*matrix)[i] = (int *)malloc(lenMatrix * sizeof(int));
+    }
+}
+
+void verifyLinearIndependence(int **matrix, int lenMatrix)
+{
+    int determinant = 0;
+    while (determinant == 0)
+    {   
+        for (int i = 0; i < lenMatrix; i++)
+        {
+            generateRandomArray(matrix[i], lenMatrix);
+        }
+        determinant = det(matrix, lenMatrix, lenMatrix);
     }
 }
 
 int main()
 {
-    int **matrix, n, determinant = 0;
+    int **matrix, lenMatrix, determinant = 0;
     srand(time(0));
 
     printf("Type how many variables you want in the System of Linear Equations: ");
-    scanf("%d", &n);
+    scanf("%d", &lenMatrix);
 
-    matrix = (int **)malloc(n * sizeof(int *));
-    for (int i = 0; i < n; i++)
-        matrix[i] = (int *)malloc(n * sizeof(int));
+    initializeMatrixMemory(&matrix, lenMatrix);
+    
+    verifyLinearIndependence(matrix, lenMatrix);
 
-    while (determinant = 0)
-    {
-        for (int i = 0; i < n; i++)
-            generateRandomArray(matrix[i], n);
-        determinant = det(matrix, n, n);
-    }
+    printMatrix(matrix, lenMatrix);
 
     return 0;
 }
