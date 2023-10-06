@@ -3,7 +3,7 @@
 #include <time.h>
 #include <math.h>
 
-int det(int **B, int m, int n)
+double det(double **B, int m, int n)
 {
     int row_size = m;
     int column_size = n;
@@ -22,13 +22,13 @@ int det(int **B, int m, int n)
 
     else
     {
-        int **minor;
+        double **minor;
         int row_minor, column_minor;
         int firstrow_columnindex;
-        int sum = 0;
-        minor = (int **)malloc(n * sizeof(int *));
+        double sum = 0;
+        minor = (double **)malloc(n * sizeof(double *));
         for (int i = 0; i < n; i++)
-            minor[i] = (int *)malloc(n * sizeof(int));
+            minor[i] = (double *)malloc(n * sizeof(double));
 
         register int row, column;
 
@@ -70,7 +70,7 @@ int det(int **B, int m, int n)
     }
 }
 
-void generateRandomArray(int *array, int lenArray)
+void generateRandomArray(double *array, int lenArray)
 {
     for (int i = 0; i < lenArray; i++)
     {
@@ -78,17 +78,17 @@ void generateRandomArray(int *array, int lenArray)
     }
 }
 
-void printArray(int *array, int n)
+void printArray(double *array, int n)
 {
     printf("[");
     for (int i = 0; i < n - 1; i++)
     {
-        printf("%d,\t", array[i]);
+        printf("%.3f,\t", array[i]);
     }
-    printf("%d]\n", array[n - 1]);
+    printf("%.3f]\n", array[n - 1]);
 }
 
-void printMatrix(int **matrix, int lenMatrix)
+void printMatrix(double **matrix, int lenMatrix)
 {
     for (int i = 0; i < lenMatrix; i++)
     {
@@ -96,20 +96,25 @@ void printMatrix(int **matrix, int lenMatrix)
     }
 }
 
-void initializeMatrixMemory(int ***matrix, int lenMatrix)
+void initializeArrayMemory(double **array, int lenArray)
 {
-    *matrix = (int **)malloc(lenMatrix * sizeof(int *));
+    *array = (double *)malloc(lenArray * sizeof(double));
+}
+
+void initializeMatrixMemory(double ***matrix, int lenMatrix)
+{
+    *matrix = (double **)malloc(lenMatrix * sizeof(double *));
     for (int i = 0; i < lenMatrix; i++)
     {
-        (*matrix)[i] = (int *)malloc(lenMatrix * sizeof(int));
+        initializeArrayMemory(&((*matrix)[i]), lenMatrix);
     }
 }
 
-void verifyLinearIndependence(int **matrix, int lenMatrix)
+void createLinearIndependentMatrix(double **matrix, int lenMatrix)
 {
-    int determinant = 0;
+    double determinant = 0;
     while (determinant == 0)
-    {   
+    {
         for (int i = 0; i < lenMatrix; i++)
         {
             generateRandomArray(matrix[i], lenMatrix);
@@ -118,19 +123,88 @@ void verifyLinearIndependence(int **matrix, int lenMatrix)
     }
 }
 
+void transposeMatrix(double **matrix, int lenMatrix)
+{
+    for (int i = 0; i < lenMatrix; i++)
+    {
+        for (int j = i + 1; j < lenMatrix; j++)
+        {
+            double auxInt = matrix[i][j];
+            matrix[i][j] = matrix[j][i];
+            matrix[j][i] = auxInt;
+        }
+    }
+}
+
+void resolveLinearSystem(double **matrix, double *y, int lenMatrix, double *answer)
+{
+    for (int i = 0; i < lenMatrix; i++)
+    {
+        y[i] /= matrix[i][i];    
+        for(int j = lenMatrix - 1; j >= 0; j--)
+        {
+            matrix[i][j] /= matrix[i][i];
+        }
+        for (int ii = i + 1; ii < lenMatrix; ii++)
+        {
+            for(int j = i + 1; j < lenMatrix; j++)
+            {
+                matrix[ii][j] -= matrix[ii][i] * matrix[i][i];
+            }
+            y[ii] -= matrix[ii][i] * y[i];
+            matrix[ii][i] = 0;
+        }
+    }
+    for (int i = lenMatrix - 1; i >= 0; i--)
+    {
+        for(int j = lenMatrix - 1; j >= i; j--)
+        {
+            answer[i] += matrix[i][j] * y[j];
+        }
+    }
+}
+
+void printVariable(char *variable, double value)
+{
+    printf("%s: %f", variable, value);
+}
+
+void printfAnswer(double *answer, int lenAnswer)
+{
+    printVariable("X", answer[0]);
+    for(int i = 1; i < lenAnswer; i++)
+    {
+        printVariable(" X", answer[i]);
+    }
+    printf("\n");
+}
+
 int main()
 {
-    int **matrix, lenMatrix, determinant = 0;
+    double **matrix, *y, *answer;
+    int lenMatrix;
     srand(time(0));
 
     printf("Type how many variables you want in the System of Linear Equations: ");
     scanf("%d", &lenMatrix);
 
     initializeMatrixMemory(&matrix, lenMatrix);
-    
-    verifyLinearIndependence(matrix, lenMatrix);
+    initializeArrayMemory(&y, lenMatrix);
+    initializeArrayMemory(&answer, lenMatrix);
 
+    createLinearIndependentMatrix(matrix, lenMatrix);
+    generateRandomArray(y, lenMatrix);
+
+    // Its necessary to transpose the matrix because the linear independent vetification is done by column orientation.
+    // In other words, the columns of the matrix represent the linear independent equations
+    transposeMatrix(matrix, lenMatrix);
     printMatrix(matrix, lenMatrix);
+    printArray(y, lenMatrix);
+    printf("=========================================\n");
+    resolveLinearSystem(matrix, y, lenMatrix, answer);
+    printMatrix(matrix, lenMatrix);
+    printArray(y, lenMatrix);
+    printfAnswer(answer, lenMatrix);
 
     return 0;
 }
