@@ -3,78 +3,74 @@
 #include <time.h>
 #include <math.h>
 
-double det(double **B, int m, int n)
+void initializeArrayMemory(double **array, int lenArray)
 {
-    int row_size = m;
-    int column_size = n;
+    *array = (double *)malloc(lenArray * sizeof(double));
+}
 
-    if (row_size != column_size)
+void initializeMatrixMemory(double ***matrix, int lenMatrix)
+{
+    *matrix = (double **)malloc(lenMatrix * sizeof(double *));
+    for (int i = 0; i < lenMatrix; i++)
     {
-        printf("DimensionError: Operation Not Permitted \n");
-        exit(1);
+        initializeArrayMemory(&((*matrix)[i]), lenMatrix);
     }
+}
 
-    else if (row_size == 1)
-        return (B[0][0]);
-
-    else if (row_size == 2)
-        return (B[0][0] * B[1][1] - B[1][0] * B[0][1]);
-
-    else
+void copyElementsMatrix(double **matrixOrigin, double **matrixDestination, int lenMatrix)
+{
+    for (int i = 0; i < lenMatrix; i++)
     {
-        double **minor;
-        int row_minor, column_minor;
-        int firstrow_columnindex;
-        double sum = 0;
-        minor = (double **)malloc(n * sizeof(double *));
-        for (int i = 0; i < n; i++)
-            minor[i] = (double *)malloc(n * sizeof(double));
-
-        register int row, column;
-
-        // exclude first row and current column
-        for (firstrow_columnindex = 0; firstrow_columnindex < row_size;
-             firstrow_columnindex++)
+        for (int j = 0; j < lenMatrix; j++)
         {
-
-            row_minor = 0;
-
-            for (row = 1; row < row_size; row++)
-            {
-
-                column_minor = 0;
-
-                for (column = 0; column < column_size; column++)
-                {
-                    if (column == firstrow_columnindex)
-                        continue;
-                    else
-                        minor[row_minor][column_minor] = B[row][column];
-
-                    column_minor++;
-                }
-
-                row_minor++;
-            }
-
-            m = row_minor;
-            n = column_minor;
-
-            if (firstrow_columnindex % 2 == 0)
-                sum += B[0][firstrow_columnindex] * det(minor, m, n);
-            else
-                sum -= B[0][firstrow_columnindex] * det(minor, m, n);
+            matrixDestination[i][j] = matrixOrigin[i][j];
         }
-        free(minor);
-        return sum;
     }
+}
+
+double det(double **matrix, int lenMatrix)
+{
+    long divide=1;
+    long result=1;
+    int counter=1;
+    double **a;
+
+    initializeMatrixMemory(&a, lenMatrix);
+    copyElementsMatrix(matrix, a, lenMatrix);
+
+    for (int i = 0; i < lenMatrix - 1; i++)
+    {
+        int temp1 = a[i][i];
+        for (int j = counter++; j < lenMatrix; j++)
+        {
+            int temp2 = a[j][i];
+            for (int k = 0; k < lenMatrix; k++)
+            {
+                a[j][k] = temp1 * a[j][k] - temp2 * a[i][k];
+            }
+        }
+    }
+
+    for (int i = 0; i < lenMatrix; i++)
+    {
+        result *= a[i][i];
+    }
+
+    for (int i = 0; i < lenMatrix - 1; i++)
+    {
+        divide *= pow(a[i][i], lenMatrix - i - 1);
+    }
+
+    result /= divide;
+    free(a);
+    return result;
 }
 
 void generateRandomArray(double *array, int lenArray)
 {
     for (int i = 0; i < lenArray; i++)
     {
-        array[i] = rand() % (lenArray * lenArray * lenArray);
+        array[i] = rand() % (lenArray * lenArray * lenArray) - rand() % (lenArray * lenArray * lenArray);
     }
 }
 
@@ -96,20 +92,6 @@ void printMatrix(double **matrix, int lenMatrix)
     }
 }
 
-void initializeArrayMemory(double **array, int lenArray)
-{
-    *array = (double *)malloc(lenArray * sizeof(double));
-}
-
-void initializeMatrixMemory(double ***matrix, int lenMatrix)
-{
-    *matrix = (double **)malloc(lenMatrix * sizeof(double *));
-    for (int i = 0; i < lenMatrix; i++)
-    {
-        initializeArrayMemory(&((*matrix)[i]), lenMatrix);
-    }
-}
-
 void createLinearIndependentMatrix(double **matrix, int lenMatrix)
 {
     double determinant = 0;
@@ -119,8 +101,9 @@ void createLinearIndependentMatrix(double **matrix, int lenMatrix)
         {
             generateRandomArray(matrix[i], lenMatrix);
         }
-        determinant = det(matrix, lenMatrix, lenMatrix);
+        determinant = det(matrix, lenMatrix);
     }
+    // printf("Determinant: %f\n", determinant);
 }
 
 void transposeMatrix(double **matrix, int lenMatrix)
@@ -197,20 +180,20 @@ int main()
     transposeMatrix(matrixA, lenMatrix);
 
     // printMatrix(matrixA, lenMatrix);
-    // printArray(y, lenMatrix);
+    // printVector(y, lenMatrix, 'b');
     // printf("=========================================\n");
 
     begin = clock();
     resolveLinearSystem(matrixA, y, lenMatrix, answer);
     end = clock();
 
-    free(matrixA);
-    free(answer);
-    free(y);
-
     // printMatrix(matrixA, lenMatrix);
     // printVector(y, lenMatrix, 'b');
     // printVector(answer, lenMatrix, 'X');
+
+    free(matrixA);
+    free(answer);
+    free(y);
 
     printf("Time: %f\n", (double)(end - begin) / CLOCKS_PER_SEC);
 
