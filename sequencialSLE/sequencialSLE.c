@@ -65,7 +65,7 @@ double det(double **B, int m, int n)
             else
                 sum -= B[0][firstrow_columnindex] * det(minor, m, n);
         }
-
+        free(minor);
         return sum;
     }
 }
@@ -140,16 +140,16 @@ void resolveLinearSystem(double **matrix, double *y, int lenMatrix, double *answ
 {
     for (int i = 0; i < lenMatrix; i++)
     {
-        y[i] /= matrix[i][i];    
-        for(int j = lenMatrix - 1; j >= 0; j--)
+        y[i] /= matrix[i][i];
+        for (int j = lenMatrix - 1; j >= 0; j--)
         {
             matrix[i][j] /= matrix[i][i];
         }
         for (int ii = i + 1; ii < lenMatrix; ii++)
         {
-            for(int j = i + 1; j < lenMatrix; j++)
+            for (int j = i + 1; j < lenMatrix; j++)
             {
-                matrix[ii][j] -= matrix[ii][i] * matrix[i][i];
+                matrix[ii][j] -= matrix[ii][i] * matrix[i][j];
             }
             y[ii] -= matrix[ii][i] * y[i];
             matrix[ii][i] = 0;
@@ -157,54 +157,62 @@ void resolveLinearSystem(double **matrix, double *y, int lenMatrix, double *answ
     }
     for (int i = lenMatrix - 1; i >= 0; i--)
     {
-        for(int j = lenMatrix - 1; j >= i; j--)
+        answer[i] = y[i];
+        for (int j = lenMatrix - 1; j > i; j--)
         {
-            answer[i] += matrix[i][j] * y[j];
+            answer[i] -= matrix[i][j] * answer[j];
         }
     }
 }
 
-void printVariable(char *variable, double value)
+void printVector(double *answer, int lenAnswer, char variableName)
 {
-    printf("%s: %f", variable, value);
-}
-
-void printfAnswer(double *answer, int lenAnswer)
-{
-    printVariable("X", answer[0]);
-    for(int i = 1; i < lenAnswer; i++)
+    printf("%c:% 7.3f", variableName, answer[0]);
+    for (int i = 1; i < lenAnswer; i++)
     {
-        printVariable(" X", answer[i]);
+        printf("\n  % 7.3f", answer[i]);
     }
     printf("\n");
 }
 
 int main()
 {
-    double **matrix, *y, *answer;
+    double **matrixA, *y, *answer, time_execution;
+    clock_t begin, end;
     int lenMatrix;
     srand(time(0));
 
     printf("Type how many variables you want in the System of Linear Equations: ");
     scanf("%d", &lenMatrix);
 
-    initializeMatrixMemory(&matrix, lenMatrix);
+    initializeMatrixMemory(&matrixA, lenMatrix);
     initializeArrayMemory(&y, lenMatrix);
     initializeArrayMemory(&answer, lenMatrix);
 
-    createLinearIndependentMatrix(matrix, lenMatrix);
+    createLinearIndependentMatrix(matrixA, lenMatrix);
     generateRandomArray(y, lenMatrix);
 
     // Its necessary to transpose the matrix because the linear independent vetification is done by column orientation.
     // In other words, the columns of the matrix represent the linear independent equations
-    transposeMatrix(matrix, lenMatrix);
-    printMatrix(matrix, lenMatrix);
-    printArray(y, lenMatrix);
-    printf("=========================================\n");
-    resolveLinearSystem(matrix, y, lenMatrix, answer);
-    printMatrix(matrix, lenMatrix);
-    printArray(y, lenMatrix);
-    printfAnswer(answer, lenMatrix);
+    transposeMatrix(matrixA, lenMatrix);
+
+    // printMatrix(matrixA, lenMatrix);
+    // printArray(y, lenMatrix);
+    // printf("=========================================\n");
+
+    begin = clock();
+    resolveLinearSystem(matrixA, y, lenMatrix, answer);
+    end = clock();
+
+    free(matrixA);
+    free(answer);
+    free(y);
+
+    // printMatrix(matrixA, lenMatrix);
+    // printVector(y, lenMatrix, 'b');
+    // printVector(answer, lenMatrix, 'X');
+
+    printf("Time: %f\n", (double)(end - begin) / CLOCKS_PER_SEC);
 
     return 0;
 }
