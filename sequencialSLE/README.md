@@ -3,7 +3,7 @@
 ### To compile:
 
 ```shell
-    gcc openMP_SLE.c -o <name_executable> -lm
+    gcc sequencialSLE.c -o <name_executable> -lm
 ```
 
 ### To run:
