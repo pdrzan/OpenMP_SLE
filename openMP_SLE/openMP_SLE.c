@@ -124,28 +124,34 @@ void resolveLinearSystem(double **matrix, double *y, int lenMatrix, double *answ
 {
     for (int i = 0; i < lenMatrix; i++)
     {
-        y[i] /= matrix[i][i];
-#pragma parallel omp for
-        for (int j = lenMatrix - 1; j >= i + 1; j--)
+#pragma omp shared(lenMatrix)
         {
-            matrix[i][j] /= matrix[i][i];
-        }
-        matrix[i][i] /= matrix[i][i];
-#pragma omp barrier
-#pragma parallel omp for
-        for (int ii = i + 1; ii < lenMatrix; ii++)
-        {
-            for (int j = i + 1; j < lenMatrix; j++)
+            y[i] /= matrix[i][i];
+            // printf("y[%d]: %.3f\n", i, y[i]);
+            // printf("lenMatrix: %d \n", lenMatrix);
+#pragma omp parallel for
+            for (int j = lenMatrix - 1; j >= i + 1; j--)
             {
-                matrix[ii][j] -= matrix[ii][i] * matrix[i][j];
+                matrix[i][j] /= matrix[i][i];
+                // printf("j: %d\n", j);
             }
-            y[ii] -= matrix[ii][i] * y[i];
-            matrix[ii][i] = 0;
+#pragma omp barrier
+            matrix[i][i] /= matrix[i][i];
+#pragma omp parallel for
+            for (int ii = i + 1; ii < lenMatrix; ii++)
+            {
+                for (int j = i + 1; j < lenMatrix; j++)
+                {
+                    matrix[ii][j] -= matrix[ii][i] * matrix[i][j];
+                }
+                y[ii] -= matrix[ii][i] * y[i];
+                matrix[ii][i] = 0;
+            }
         }
     }
     for (int i = lenMatrix - 1; i >= 0; i--)
     {
-        double answerAux = y[i];
+        double answerAux = y[i]; 
         #pragma omp parallel for reduction(- : answerAux)
         for (int j = lenMatrix - 1; j > i; j--)
         {
