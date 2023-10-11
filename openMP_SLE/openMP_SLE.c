@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <omp.h>
 
 void initializeArrayMemory(double **array, int lenArray)
 {
@@ -30,9 +31,9 @@ void copyElementsMatrix(double **matrixOrigin, double **matrixDestination, int l
 
 double det(double **matrix, int lenMatrix)
 {
-    long divide=1;
-    long result=1;
-    int counter=1;
+    long divide = 1;
+    long result = 1;
+    int counter = 1;
     double **a;
 
     initializeMatrixMemory(&a, lenMatrix);
@@ -123,28 +124,40 @@ void resolveLinearSystem(double **matrix, double *y, int lenMatrix, double *answ
 {
     for (int i = 0; i < lenMatrix; i++)
     {
-        y[i] /= matrix[i][i];
-        for (int j = lenMatrix - 1; j >= 0; j--)
+#pragma omp shared(lenMatrix)
         {
-            matrix[i][j] /= matrix[i][i];
-        }
-        for (int ii = i + 1; ii < lenMatrix; ii++)
-        {
-            for (int j = i + 1; j < lenMatrix; j++)
+            y[i] /= matrix[i][i];
+            // printf("y[%d]: %.3f\n", i, y[i]);
+            // printf("lenMatrix: %d \n", lenMatrix);
+#pragma omp parallel for
+            for (int j = lenMatrix - 1; j >= i + 1; j--)
             {
-                matrix[ii][j] -= matrix[ii][i] * matrix[i][j];
+                matrix[i][j] /= matrix[i][i];
+                // printf("j: %d\n", j);
             }
-            y[ii] -= matrix[ii][i] * y[i];
-            matrix[ii][i] = 0;
+#pragma omp barrier
+            matrix[i][i] /= matrix[i][i];
+#pragma omp parallel for
+            for (int ii = i + 1; ii < lenMatrix; ii++)
+            {
+                for (int j = i + 1; j < lenMatrix; j++)
+                {
+                    matrix[ii][j] -= matrix[ii][i] * matrix[i][j];
+                }
+                y[ii] -= matrix[ii][i] * y[i];
+                matrix[ii][i] = 0;
+            }
         }
     }
     for (int i = lenMatrix - 1; i >= 0; i--)
     {
-        answer[i] = y[i];
+        double answerAux = y[i]; 
+        #pragma omp parallel for reduction(- : answerAux)
         for (int j = lenMatrix - 1; j > i; j--)
         {
-            answer[i] -= matrix[i][j] * answer[j];
+            answerAux -= matrix[i][j] * answer[j];
         }
+        answer[i] = answerAux;
     }
 }
 
@@ -160,12 +173,11 @@ void printVector(double *answer, int lenAnswer, char variableName)
 
 int main()
 {
-    double **matrixA, *y, *answer, time_execution;
-    clock_t begin, end;
+    double **matrixA, *y, *answer, time_execution, begin, end;
     int lenMatrix;
     srand(time(0));
 
-    printf("Type how many variables you want in the System of Linear Equations: ");
+    // printf("Type how many variables you want in the System of Linear Equations: ");
     scanf("%d", &lenMatrix);
 
     initializeMatrixMemory(&matrixA, lenMatrix);
@@ -183,9 +195,9 @@ int main()
     // printVector(y, lenMatrix, 'b');
     // printf("=========================================\n");
 
-    begin = clock();
+    begin = omp_get_wtime();
     resolveLinearSystem(matrixA, y, lenMatrix, answer);
-    end = clock();
+    end = omp_get_wtime();
 
     // printMatrix(matrixA, lenMatrix);
     // printVector(y, lenMatrix, 'b');
@@ -195,7 +207,7 @@ int main()
     free(answer);
     free(y);
 
-    printf("Time: %f\n", (double)(end - begin) / CLOCKS_PER_SEC);
+    printf("Time: %f\n", end - begin);
 
     return 0;
 }
