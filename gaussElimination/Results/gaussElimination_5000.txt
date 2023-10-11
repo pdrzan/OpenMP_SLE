@@ -1,0 +1,3 @@
+the number of variables: 5000
+Gaussian Elimination, sequencial method time 355.967508 s
+Gaussian Elimination, parallel method time 206.095006 s
